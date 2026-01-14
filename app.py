@@ -3,110 +3,72 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-st.set_page_config(page_title="IA Pro Analytics", layout="wide")
+# Configuración de página estilo Profesional
+st.set_page_config(page_title="PRO AI Betting Terminal", layout="wide", initial_sidebar_state="collapsed")
 
-st.title("🛡️ Sistema de Inteligencia Deportiva Profesional")
-st.sidebar.header("Panel de Control")
+# Estilo CSS personalizado para que sea "bonita" y profesional
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .stMetric { background-color: #1f2937; padding: 15px; border-radius: 10px; border: 1px solid #374151; }
+    .stButton>button { width: 100%; background-color: #2563eb; color: white; border-radius: 8px; height: 3em; font-weight: bold; }
+    .prediction-card { padding: 20px; border-radius: 15px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #3b82f6; margin-bottom: 20px; }
+    h1, h2, h3 { color: #f8fafc !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
+st.title("🚀 PRO AI Betting Terminal")
+st.markdown("---")
+
+# Diccionario de ligas
 ligas = {
-    "España (La Liga)": "SP1.csv",
-    "Inglaterra (Premier)": "E0.csv",
-    "Italia (Serie A)": "I1.csv",
-    "Alemania (Bundesliga)": "D1.csv"
+    "🇪🇸 La Liga": "SP1.csv",
+    "🇬🇧 Premier League": "E0.csv",
+    "🇮🇹 Serie A": "I1.csv",
+    "🇩🇪 Bundesliga": "D1.csv"
 }
 
-seleccion_liga = st.sidebar.selectbox("Selecciona la Competición", list(ligas.keys()))
+seleccion_liga = st.sidebar.selectbox("Selecciona Competición", list(ligas.keys()))
 
 @st.cache_data
-def cargar_datos_pro(archivo):
+def load_pro_data(archivo):
     try:
         df = pd.read_csv(archivo)
-        # Columnas: HomeTeam, AwayTeam, B365H, B365D, B365A, FTR (Resultado), 
-        # FTHG/FTAG (Goles), HC/AC (Corners), HY/AY (Amarillas), HST/AST (Tiros puerta)
-        cols = ['HomeTeam', 'AwayTeam', 'B365H', 'B365D', 'B365A', 'FTR', 
-                'FTHG', 'FTAG', 'HC', 'AC', 'HY', 'AY', 'HST', 'AST']
+        cols = ['HomeTeam', 'AwayTeam', 'B365H', 'B365D', 'B365A', 'FTR', 'FTHG', 'FTAG', 'HC', 'AC', 'HY', 'AY']
         return df[cols].dropna()
-    except:
-        return None
+    except: return None
 
-df = cargar_datos_pro(ligas[seleccion_liga])
+df = load_pro_data(ligas[seleccion_liga])
 
 if df is not None:
-    # --- PREPARACIÓN DE DATOS ---
+    # --- PROCESAMIENTO ---
     le = LabelEncoder()
     equipos = sorted(pd.concat([df['HomeTeam'], df['AwayTeam']]).unique())
     le.fit(equipos)
     
-    df['H_ID'] = le.transform(df['HomeTeam'])
-    df['A_ID'] = le.transform(df['AwayTeam'])
-    
-    # Entradas para la IA
+    df['H_ID'], df['A_ID'] = le.transform(df['HomeTeam']), le.transform(df['AwayTeam'])
+    df['Target'] = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
     X = df[['H_ID', 'A_ID', 'B365H', 'B365D', 'B365A']]
     
-    # Objetivos (Lo que queremos predecir)
-    y_res = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
-    y_goles = df['FTHG'] + df['FTAG']
-    y_corners = df['HC'] + df['AC']
-    y_tarjetas = df['HY'] + df['AY']
+    # Entrenar modelos (Resultado, Goles, Corners, Tarjetas)
+    with st.spinner('Actualizando algoritmos...'):
+        m_res = RandomForestClassifier(n_estimators=150).fit(X.values, df['Target'])
+        m_gol = RandomForestRegressor(n_estimators=150).fit(X.values, df['FTHG'] + df['FTAG'])
+        m_cor = RandomForestRegressor(n_estimators=150).fit(X.values, df['HC'] + df['AC'])
+        m_tar = RandomForestRegressor(n_estimators=150).fit(X.values, df['HY'] + df['AY'])
 
-    # --- ENTRENAMIENTO MULTI-MODELO ---
-    with st.spinner('Entrenando motores estadísticos...'):
-        model_res = RandomForestClassifier(n_estimators=200).fit(X.values, y_res)
-        model_goles = RandomForestRegressor(n_estimators=200).fit(X.values, y_goles)
-        model_corners = RandomForestRegressor(n_estimators=200).fit(X.values, y_corners)
-        model_tarjetas = RandomForestRegressor(n_estimators=200).fit(X.values, y_tarjetas)
-
-    # --- INTERFAZ ---
-    c1, c2 = st.columns(2)
-    with c1: local = st.selectbox("Equipo Local", equipos)
-    with c2: visita = st.selectbox("Equipo Visitante", equipos)
-
-    st.divider()
+    # --- PANEL LATERAL DE ENTRADA ---
+    st.sidebar.subheader("Análisis de Partido")
+    local = st.sidebar.selectbox("Local", equipos)
+    visita = st.sidebar.selectbox("Visitante", equipos, index=1)
     
-    # Cuotas
-    st.subheader("🏦 Mercado de Apuestas")
-    q1, q2, q3 = st.columns(3)
-    ch = q1.number_input("Cuota Local", value=2.0)
-    cd = q2.number_input("Cuota Empate", value=3.2)
-    ca = q3.number_input("Cuota Visita", value=3.8)
+    st.sidebar.markdown("### 📈 Cuotas Live")
+    ch = st.sidebar.number_input("Cuota 1", value=2.0)
+    cd = st.sidebar.number_input("Cuota X", value=3.2)
+    ca = st.sidebar.number_input("Cuota 2", value=3.5)
 
-    if st.button("🔍 GENERAR ANÁLISIS PROFESIONAL"):
-        id_l, id_v = le.transform([local])[0], le.transform([visita])[0]
-        input_data = [[id_l, id_v, ch, cd, ca]]
+    # --- MAIN UI ---
+    col_main_1, col_main_2 = st.columns([2, 1])
 
-        # Predicciones
-        prob_res = model_res.predict_proba(input_data)[0]
-        pred_goles = model_corners.predict(input_data)[0] # Usando modelo regressor
-        pred_corn = model_corners.predict(input_data)[0]
-        pred_tarj = model_tarjetas.predict(input_data)[0]
-        pred_goles_val = model_goles.predict(input_data)[0]
-
-        # DISEÑO DE RESULTADOS
-        st.subheader("📊 Pronósticos de Alta Probabilidad")
-        
-        r1, r2, r3, r4 = st.columns(4)
-        r1.metric("Goles Totales", f"{pred_goles_val:.1f}")
-        r2.metric("Córners Est.", f"{pred_corn:.1f}")
-        r3.metric("Tarjetas Est.", f"{pred_tarj:.1f}")
-        r4.metric("Prob. Victoria", f"{max(prob_res)*100:.1f}%")
-
-        # Tarjetas de Análisis
-        st.divider()
-        a1, a2 = st.columns(2)
-        
-        with a1:
-            st.markdown("### ⚽ Mercado de Goles")
-            if pred_goles_val > 2.5:
-                st.success("Sugerencia: **Over 2.5 Goles** (Partido Abierto)")
-            else:
-                st.warning("Sugerencia: **Under 2.5 Goles** (Partido Cerrado)")
-        
-        with a2:
-            st.markdown("### 🚩 Mercado de Córners")
-            if pred_corn > 9.5:
-                st.success("Sugerencia: **Más de 9.5 Córners**")
-            else:
-                st.info("Sugerencia: **Menos de 9.5 Córners**")
-
-else:
-    st.error("Por favor, verifica que todos los archivos .csv estén en tu GitHub.")
+    with col_main_1:
+        st.markdown(f"""
