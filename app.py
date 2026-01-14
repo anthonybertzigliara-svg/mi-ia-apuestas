@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-st.set_page_config(page_title="IA Pronosticador Pro", layout="wide")
+st.set_page_config(page_title="IA Pro Analytics", layout="wide")
 
-st.title("🏆 IA Predictor Multiliga")
-st.sidebar.header("Configuración de Liga")
+st.title("🛡️ Sistema de Inteligencia Deportiva Profesional")
+st.sidebar.header("Panel de Control")
 
 ligas = {
     "España (La Liga)": "SP1.csv",
@@ -15,65 +15,98 @@ ligas = {
     "Alemania (Bundesliga)": "D1.csv"
 }
 
-seleccion_liga = st.sidebar.selectbox("Selecciona la Liga", list(ligas.keys()))
-archivo_liga = ligas[seleccion_liga]
+seleccion_liga = st.sidebar.selectbox("Selecciona la Competición", list(ligas.keys()))
 
 @st.cache_data
-def cargar_datos(archivo):
+def cargar_datos_pro(archivo):
     try:
         df = pd.read_csv(archivo)
-        return df
+        # Columnas: HomeTeam, AwayTeam, B365H, B365D, B365A, FTR (Resultado), 
+        # FTHG/FTAG (Goles), HC/AC (Corners), HY/AY (Amarillas), HST/AST (Tiros puerta)
+        cols = ['HomeTeam', 'AwayTeam', 'B365H', 'B365D', 'B365A', 'FTR', 
+                'FTHG', 'FTAG', 'HC', 'AC', 'HY', 'AY', 'HST', 'AST']
+        return df[cols].dropna()
     except:
         return None
 
-df = cargar_datos(archivo_liga)
+df = cargar_datos_pro(ligas[seleccion_liga])
 
 if df is not None:
-    columnas_clave = ['HomeTeam', 'AwayTeam', 'B365H', 'B365D', 'B365A', 'FTR']
-    df = df[columnas_clave].dropna()
-
+    # --- PREPARACIÓN DE DATOS ---
     le = LabelEncoder()
-    todos_equipos = sorted(pd.concat([df['HomeTeam'], df['AwayTeam']]).unique())
-    le.fit(todos_equipos)
+    equipos = sorted(pd.concat([df['HomeTeam'], df['AwayTeam']]).unique())
+    le.fit(equipos)
     
     df['H_ID'] = le.transform(df['HomeTeam'])
     df['A_ID'] = le.transform(df['AwayTeam'])
-    df['Target'] = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
-
-    X = df[['H_ID', 'A_ID', 'B365H', 'B365D', 'B365A']]
-    y = df['Target']
     
-    model = RandomForestClassifier(n_estimators=200, random_state=42)
-    model.fit(X.values, y)
+    # Entradas para la IA
+    X = df[['H_ID', 'A_ID', 'B365H', 'B365D', 'B365A']]
+    
+    # Objetivos (Lo que queremos predecir)
+    y_res = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
+    y_goles = df['FTHG'] + df['FTAG']
+    y_corners = df['HC'] + df['AC']
+    y_tarjetas = df['HY'] + df['AY']
 
-    st.info(f"📍 Analizando: {seleccion_liga}")
-    col1, col2 = st.columns(2)
-    with col1:
-        local = st.selectbox("Equipo Local", todos_equipos)
-    with col2:
-        visita = st.selectbox("Equipo Visitante", todos_equipos)
+    # --- ENTRENAMIENTO MULTI-MODELO ---
+    with st.spinner('Entrenando motores estadísticos...'):
+        model_res = RandomForestClassifier(n_estimators=200).fit(X.values, y_res)
+        model_goles = RandomForestRegressor(n_estimators=200).fit(X.values, y_goles)
+        model_corners = RandomForestRegressor(n_estimators=200).fit(X.values, y_corners)
+        model_tarjetas = RandomForestRegressor(n_estimators=200).fit(X.values, y_tarjetas)
 
-    st.subheader("📊 Cuotas Actuales")
-    c1, c2, c3 = st.columns(3)
-    ch = c1.number_input("Cuota Local", value=2.0, step=0.01)
-    cd = c2.number_input("Cuota Empate", value=3.20, step=0.01)
-    ca = c3.number_input("Cuota Visita", value=3.50, step=0.01)
+    # --- INTERFAZ ---
+    c1, c2 = st.columns(2)
+    with c1: local = st.selectbox("Equipo Local", equipos)
+    with c2: visita = st.selectbox("Equipo Visitante", equipos)
 
-    if st.button("🚀 CALCULAR"):
-        id_l = le.transform([local])[0]
-        id_v = le.transform([visita])[0]
-        probabilidades = model.predict_proba([[id_l, id_v, ch, cd, ca]])[0]
+    st.divider()
+    
+    # Cuotas
+    st.subheader("🏦 Mercado de Apuestas")
+    q1, q2, q3 = st.columns(3)
+    ch = q1.number_input("Cuota Local", value=2.0)
+    cd = q2.number_input("Cuota Empate", value=3.2)
+    ca = q3.number_input("Cuota Visita", value=3.8)
+
+    if st.button("🔍 GENERAR ANÁLISIS PROFESIONAL"):
+        id_l, id_v = le.transform([local])[0], le.transform([visita])[0]
+        input_data = [[id_l, id_v, ch, cd, ca]]
+
+        # Predicciones
+        prob_res = model_res.predict_proba(input_data)[0]
+        pred_goles = model_corners.predict(input_data)[0] # Usando modelo regressor
+        pred_corn = model_corners.predict(input_data)[0]
+        pred_tarj = model_tarjetas.predict(input_data)[0]
+        pred_goles_val = model_goles.predict(input_data)[0]
+
+        # DISEÑO DE RESULTADOS
+        st.subheader("📊 Pronósticos de Alta Probabilidad")
         
-        p_empate, p_local, p_visita = probabilidades[0]*100, probabilidades[1]*100, probabilidades[2]*100
+        r1, r2, r3, r4 = st.columns(4)
+        r1.metric("Goles Totales", f"{pred_goles_val:.1f}")
+        r2.metric("Córners Est.", f"{pred_corn:.1f}")
+        r3.metric("Tarjetas Est.", f"{pred_tarj:.1f}")
+        r4.metric("Prob. Victoria", f"{max(prob_res)*100:.1f}%")
 
+        # Tarjetas de Análisis
         st.divider()
-        m1, m2, m3 = st.columns(3)
-        m1.metric(f"Gana {local}", f"{p_local:.1f}%")
-        m2.metric("Empate", f"{p_empate:.1f}%")
-        m3.metric(f"Gana {visita}", f"{p_visita:.1f}%")
+        a1, a2 = st.columns(2)
+        
+        with a1:
+            st.markdown("### ⚽ Mercado de Goles")
+            if pred_goles_val > 2.5:
+                st.success("Sugerencia: **Over 2.5 Goles** (Partido Abierto)")
+            else:
+                st.warning("Sugerencia: **Under 2.5 Goles** (Partido Cerrado)")
+        
+        with a2:
+            st.markdown("### 🚩 Mercado de Córners")
+            if pred_corn > 9.5:
+                st.success("Sugerencia: **Más de 9.5 Córners**")
+            else:
+                st.info("Sugerencia: **Menos de 9.5 Córners**")
 
-        if p_local > 60: st.success(f"✅ Sugerencia: Local")
-        elif p_visita > 60: st.success(f"✅ Sugerencia: Visitante")
-        else: st.info("💡 Partido parejo")
 else:
-    st.error(f"Falta el archivo {archivo_liga}")
+    st.error("Por favor, verifica que todos los archivos .csv estén en tu GitHub.")
