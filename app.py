@@ -3,77 +3,63 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-# Configuración Final Pro - Con Fondo Personalizado
-st.set_page_config(page_title="AI ELITE BETTING", layout="wide")
+# Configuración 100% Fútbol
+st.set_page_config(page_title="IA ELITE BETTING - STADIUM", layout="wide")
 
-# CSS para el fondo de imagen y ajustes de diseño
 st.markdown("""
     <style>
-    /* ------------------- FONDO DE IMAGEN ------------------- */
     .stApp {
-        background-image: url("https://images.pexels.com/photos/3389536/pexels-photo-3389536.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"); /* <--- ¡PEGA AQUÍ LA URL DE TU IMAGEN! */
+        background-image: url("https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80");
         background-size: cover;
         background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed; /* Mantiene el fondo fijo al hacer scroll */
+        background-attachment: fixed;
     }
-    .main { 
-        background-color: rgba(15, 23, 42, 0.85); /* Fondo oscuro semitransparente para ver la imagen */
-        border-radius: 15px; /* Bordes redondeados para el contenido principal */
-        padding: 20px;
-        margin: 20px;
-    }
-    .stSidebar {
-        background-color: rgba(15, 23, 42, 0.95); /* Sidebar más oscuro y opaco */
-        border-radius: 15px;
-    }
-    .stMetric { 
-        background-color: #1e293b !important; 
-        border: 1px solid #3b82f6 !important; 
-        border-radius: 10px; padding: 10px !important; 
-    }
-    div[data-testid="stMetricValue"] { color: #38bdf8 !important; font-weight: bold; }
     
-    /* Input de cuotas (fondo y texto) */
-    input[type="number"] {
-        color: white !important;
-        background-color: #1e293b !important;
-        font-weight: bold !important;
-        font-size: 18px !important;
-        border: 1px solid #3b82f6 !important; /* Borde para que destaque */
-        border-radius: 8px;
+    .main { 
+        background-color: rgba(10, 15, 30, 0.88); 
+        border-radius: 20px;
+        padding: 30px;
+        border: 1px solid rgba(56, 189, 248, 0.3);
     }
-    label { color: #bae6fd !important; font-weight: bold !important; }
+
+    /* Estilo de los números de cuotas para que brillen */
+    input[type="number"] {
+        color: #00ff00 !important; /* Verde Neón para las cuotas */
+        background-color: #0f172a !important;
+        font-weight: 800 !important;
+        font-size: 22px !important;
+        border: 2px solid #38bdf8 !important;
+    }
 
     .winner-card {
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.9) 0%, rgba(6, 182, 212, 0.9) 100%);
-        padding: 25px; border-radius: 20px; text-align: center; margin: 20px 0;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 2px solid #67e8f9;
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.95) 0%, rgba(30, 64, 175, 0.95) 100%);
+        padding: 30px; border-radius: 25px; text-align: center; margin-bottom: 25px;
+        border: 2px solid #60a5fa; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
     }
+
     .metric-box {
-        background: rgba(30, 41, 59, 0.9); /* Fondo semitransparente */
+        background: rgba(30, 41, 59, 0.95);
         padding: 20px; border-radius: 15px; border: 1px solid #38bdf8;
-        text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); margin-bottom: 10px;
+        text-align: center; margin-bottom: 15px;
     }
-    .metric-title { color: #bae6fd; font-size: 16px; font-weight: 600; }
-    .metric-value { color: white; font-size: 32px; font-weight: 800; }
-    
-    .rec-text { font-size: 18px; font-weight: bold; margin-top: 10px; padding: 5px; border-radius: 8px; }
-    .rec-over { color: #4ade80; background: rgba(74, 222, 128, 0.2); }
-    .rec-under { color: #facc15; background: rgba(250, 204, 21, 0.2); }
+
+    .rec-text { font-size: 18px; font-weight: 900; margin-top: 10px; border-radius: 5px; padding: 5px; }
+    .rec-over { color: #22c55e; border: 1px solid #22c55e; }
+    .rec-under { color: #ef4444; border: 1px solid #ef4444; }
 
     .stButton>button { 
-        background: linear-gradient(90deg, #2563eb, #06b6d4); 
-        color: white; font-weight: bold; width: 100%; border-radius: 12px; height: 3.5em; border: none; font-size: 20px;
+        background: #2563eb; color: white; font-weight: bold; width: 100%; 
+        border-radius: 12px; height: 3.5em; font-size: 22px; border: 2px solid #38bdf8;
     }
-    h1, h2, h3, h4, h5, h6 { color: white !important; } /* Asegura que todos los títulos sean blancos */
+    
+    label { color: #ffffff !important; font-size: 18px !important; text-shadow: 1px 1px 2px black; }
+    h1, h2, h3 { text-shadow: 2px 2px 4px rgba(0,0,0,0.7); }
     </style>
     """, unsafe_allow_html=True)
 
+# Lógica de carga (Igual que antes pero optimizada)
 ligas = {"🇪🇸 La Liga": "SP1.csv", "🇬🇧 Premier": "E0.csv", "🇮🇹 Serie A": "I1.csv", "🇩🇪 Bundesliga": "D1.csv"}
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2643/2643501.png", width=100)
-st.sidebar.title("PANEL DE CONTROL")
-sel = st.sidebar.selectbox("SELECCIONAR LIGA", list(ligas.keys()))
+sel = st.sidebar.selectbox("LIGA", list(ligas.keys()))
 
 @st.cache_data
 def load(file):
@@ -98,50 +84,45 @@ if df is not None:
     m_c = RandomForestRegressor(n_estimators=100).fit(X.values, df['HC'] + df['AC'])
     m_t = RandomForestRegressor(n_estimators=100).fit(X.values, df['HY'] + df['AY'])
 
-    st.markdown(f"<h1 style='text-align: center;'>⚽ TERMINAL INTELIGENTE: {sel.upper()}</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: white;'>🏟️ TERMINAL DE INTELIGENCIA DEPORTIVA</h1>", unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
     t1 = c1.selectbox("EQUIPO LOCAL", teams)
     t2 = c2.selectbox("EQUIPO VISITANTE", teams, index=1)
     
-    st.markdown("### 🏦 CUOTAS DEL MERCADO (€)")
+    st.markdown("### 🏦 CUOTAS (€)")
     cq1, cq2, cq3 = st.columns(3)
-    q1 = cq1.number_input("Cuota Local (€)", value=2.00, step=0.01, format="%.2f")
-    qx = cq2.number_input("Cuota Empate (€)", value=3.20, step=0.01, format="%.2f")
-    q2 = cq3.number_input("Cuota Visita (€)", value=3.50, step=0.01, format="%.2f")
+    q1 = cq1.number_input("Local", value=2.00, format="%.2f")
+    qx = cq2.number_input("Empate", value=3.20, format="%.2f")
+    q2 = cq3.number_input("Visita", value=3.50, format="%.2f")
 
-    if st.button("🔥 ANALIZAR PARTIDO AHORA"):
+    if st.button("🚀 CALCULAR PRONÓSTICO ELITE"):
         v = [[le.transform([t1])[0], le.transform([t2])[0], q1, qx, q2]]
-        p = m_r.predict_proba(v)[0]
-        g, cor, tar = m_g.predict(v)[0], m_c.predict(v)[0], m_t.predict(v)[0]
-        
+        p, g, cor, tar = m_r.predict_proba(v)[0], m_g.predict(v)[0], m_c.predict(v)[0], m_t.predict(v)[0]
         gan = t1 if p[1] > p[2] and p[1] > p[0] else (t2 if p[2] > p[1] and p[2] > p[0] else "Empate")
 
-        st.markdown(f"""
-            <div class="winner-card">
-                <h2 style="color: white; font-size: 60px; margin: 0;">{gan.upper()}</h2>
-                <p style="font-size: 20px; color: #e0f2fe;">Probabilidad de Éxito: {max(p)*100:.1f}%</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="winner-card"><h1 style="font-size: 65px; margin:0;">{gan.upper()}</h1><p style="font-size:24px;">Confianza del Sistema: {max(p)*100:.1f}%</p></div>', unsafe_allow_html=True)
 
-        # MÉTRICAS DETALLADAS
+        # Resultados con texto explicativo
         r1, r2, r3 = st.columns(3)
         with r1:
-            txt = "🔥 OVER 2.5" if g > 2.5 else "🧊 UNDER 2.5"
-            st.markdown(f'<div class="metric-box"><div class="metric-title">Goles Est.</div><div class="metric-value">{g:.1f}</div><div class="rec-text {"rec-over" if g > 2.5 else "rec-under"}">{txt}</div></div>', unsafe_allow_html=True)
+            txt = "OVER 2.5 GOLES" if g > 2.5 else "UNDER 2.5 GOLES"
+            cl = "rec-over" if g > 2.5 else "rec-under"
+            st.markdown(f'<div class="metric-box"><div style="color:#bae6fd">Goles Totales</div><div style="font-size:35px; font-weight:800;">{g:.1f}</div><div class="rec-text {cl}">{txt}</div></div>', unsafe_allow_html=True)
         with r2:
-            txt = "🚩 +9.5 CÓRNERS" if cor > 9.5 else "🚩 -9.5 CÓRNERS"
-            st.markdown(f'<div class="metric-box"><div class="metric-title">Córners Est.</div><div class="metric-value">{cor:.1f}</div><div class="rec-text {"rec-over" if cor > 9.5 else "rec-under"}">{txt}</div></div>', unsafe_allow_html=True)
+            txt = "+9.5 CÓRNERS" if cor > 9.5 else "-9.5 CÓRNERS"
+            cl = "rec-over" if cor > 9.5 else "rec-under"
+            st.markdown(f'<div class="metric-box"><div style="color:#bae6fd">Córners</div><div style="font-size:35px; font-weight:800;">{cor:.1f}</div><div class="rec-text {cl}">{txt}</div></div>', unsafe_allow_html=True)
         with r3:
-            txt = "🟨 +4.5 TARJETAS" if tar > 4.5 else "🟩 -4.5 TARJETAS"
-            st.markdown(f'<div class="metric-box"><div class="metric-title">Tarjetas Est.</div><div class="metric-value">{tar:.1f}</div><div class="rec-text {"rec-over" if tar > 4.5 else "rec-under"}">{txt}</div></div>', unsafe_allow_html=True)
+            txt = "+4.5 TARJETAS" if tar > 4.5 else "-4.5 TARJETAS"
+            cl = "rec-over" if tar > 4.5 else "rec-under"
+            st.markdown(f'<div class="metric-box"><div style="color:#bae6fd">Tarjetas</div><div style="font-size:35px; font-weight:800;">{tar:.1f}</div><div class="rec-text {cl}">{txt}</div></div>', unsafe_allow_html=True)
 
-        # PROBABILIDADES 1X2 CON COLORES
-        st.markdown("### 🎯 PROBABILIDADES 1X2")
+        # Probabilidades Finales
+        st.markdown("### 🎯 PROBABILIDADES REALES")
         p1, px, p2 = st.columns(3)
-        p1.markdown(f'<div class="metric-box" style="border-color:#4ade80"><div class="metric-title">Gana {t1}</div><div class="metric-value" style="color:#4ade80">{p[1]*100:.1f}%</div></div>', unsafe_allow_html=True)
-        px.markdown(f'<div class="metric-box" style="border-color:#facc15"><div class="metric-title">Empate (X)</div><div class="metric-value" style="color:#facc15">{p[0]*100:.1f}%</div></div>', unsafe_allow_html=True)
-        p2.markdown(f'<div class="metric-box" style="border-color:#ef4444"><div class="metric-title">Gana {t2}</div><div class="metric-value" style="color:#ef4444">{p[2]*100:.1f}%</div></div>', unsafe_allow_html=True)
-
+        p1.markdown(f'<div class="metric-box" style="border-color:#22c55e">Gana {t1}<br><span style="font-size:25px; color:#22c55e;">{p[1]*100:.1f}%</span></div>', unsafe_allow_html=True)
+        px.markdown(f'<div class="metric-box" style="border-color:#facc15">Empate<br><span style="font-size:25px; color:#facc15;">{p[0]*100:.1f}%</span></div>', unsafe_allow_html=True)
+        p2.markdown(f'<div class="metric-box" style="border-color:#ef4444">Gana {t2}<br><span style="font-size:25px; color:#ef4444;">{p[2]*100:.1f}%</span></div>', unsafe_allow_html=True)
 else:
-    st.error("Sube los archivos CSV")
+    st.error("⚠️ Sube los archivos CSV a tu repositorio de GitHub.")
