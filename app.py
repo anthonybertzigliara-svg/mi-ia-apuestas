@@ -81,32 +81,32 @@ if df is not None:
     
     st.markdown("<div class='bet-header'>CUOTAS 1X2</div>", unsafe_allow_html=True)
     q1, qx, q2 = st.columns(3)
-    v1 = q1.number_input(f"1 ({t1})", value=2.0)
-    vx = qx.number_input("X (Empate)", value=3.2)
-    v2 = q2.number_input(f"2 ({t2})", value=3.5)
+    v1 = q1.number_input(f"1 ({t1})", value=2.0, step=0.01)
+    vx = qx.number_input("X (Empate)", value=3.2, step=0.01)
+    v2 = q2.number_input(f"2 ({t2})", value=3.5, step=0.01)
 
     if st.button("🚀 ANALIZAR Y GUARDAR"):
         v_in = [[le.transform([t1])[0], le.transform([t2])[0], v1, vx, v2]]
-        probs = m_win.predict_proba(v_in)[0] # [Empate, Local, Visita]
+        probs = m_win.predict_proba(v_in)[0] 
         g, c, cards = m_goals.predict(v_in)[0], m_corn.predict(v_in)[0], m_cards.predict(v_in)[0]
         
         # Lógica de Pick
         idx = m_win.predict(v_in)[0]
-        pick = t1 if idx == 1 else (t2 if idx == 2 else "X")
+        ganador_pick = t1 if idx == 1 else (t2 if idx == 2 else "Empate")
 
-        # Guardar en Quiniela
+        # Guardar en Quiniela con símbolos + / -
         st.session_state.quiniela.append({
             "Partido": f"{t1} vs {t2}",
-            "Pick": pick,
-            "Goles": f"{g:.1f}",
-            "Córners": f"{c:.0f}",
-            "Prob": f"{max(probs)*100:.0f}%"
+            "GANADOR": ganador_pick,
+            "Goles": f"{'+ 2.5' if g > 2.5 else '- 2.5'} ({g:.1f})",
+            "Córners": f"{'+ 9.5' if c > 9.5 else '- 9.5'} ({c:.0f})",
+            "Tarjetas": f"{'+ 4.5' if cards > 4.5 else '- 4.5'}",
+            "Confianza": f"{max(probs)*100:.0f}%"
         })
 
-        # Mostrar Resultados con (+) y (-)
+        # Mostrar Resultados Visuales
         st.markdown("<div class='bet-header'>DETALLES DEL PRONÓSTICO</div>", unsafe_allow_html=True)
         r1, r2, r3 = st.columns(3)
-        
         with r1:
             tag = "tag-plus" if g > 2.5 else "tag-minus"
             st.markdown(f'<div class="status-card"><p>GOLES</p><div class="metric-value">{g:.1f}</div><span class="{tag}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
@@ -117,11 +117,13 @@ if df is not None:
             tag = "tag-plus" if cards > 4.5 else "tag-minus"
             st.markdown(f'<div class="status-card"><p>TARJETAS</p><div class="metric-value">{cards:.1f}</div><span class="{tag}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
 
-    # 5. CUADRO DE QUINIELA (HISTORIAL)
+    # 5. CUADRO DE QUINIELA MEJORADO
     if st.session_state.quiniela:
         st.markdown("<div class='bet-header'>📋 MI QUINIELA DE SESIÓN</div>", unsafe_allow_html=True)
+        # Convertimos la lista a un DataFrame para mostrarlo como tabla profesional
         q_df = pd.DataFrame(st.session_state.quiniela)
-        st.table(q_df)
-        if st.button("Limpiar Quiniela"):
+        st.dataframe(q_df, use_container_width=True, hide_index=True)
+        
+        if st.button("🗑️ Limpiar Historial"):
             st.session_state.quiniela = []
             st.rerun()
