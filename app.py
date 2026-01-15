@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime, timedelta
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-# 1. ESTILO DE MÁXIMA VISIBILIDAD (CORRECCIÓN TOTAL DE TABLAS Y ETIQUETAS)
+# 1. ESTILO DE MÁXIMA VISIBILIDAD (ELITE TERMINAL)
 st.set_page_config(page_title="WORLD ELITE BETTING AI", layout="wide")
 
 st.markdown("""
@@ -13,34 +14,28 @@ st.markdown("""
                     url("https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop");
         background-size: cover;
     }
-    
-    /* FORZAR COLOR BLANCO EN ETIQUETAS DE SELECTORES */
     label { color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; }
 
-    /* --- CORRECCIÓN CRÍTICA PARA LA QUINIELA (TABLA) --- */
-    .stTable td, .stTable th, [data-testid="stTable"] td, [data-testid="stTable"] th {
+    /* QUINIELA Y TABLAS */
+    .stTable td, .stTable th {
         color: white !important;
         font-weight: bold !important;
-        font-size: 1.05rem !important;
         background-color: rgba(0,0,0,0.4) !important;
-        border: 1px solid #00f2ff33 !important;
     }
-    /* Estilo para los encabezados de la tabla */
-    thead tr th {
-        background-color: #00f2ff !important;
-        color: black !important;
-        font-weight: 900 !important;
-    }
+    thead tr th { background-color: #00f2ff !important; color: black !important; }
 
-    .stat-text {
-        color: #FFFFFF !important;
-        font-weight: bold;
-        background: rgba(0,0,0,0.5);
-        padding: 5px 10px;
-        border-radius: 8px;
-        border: 1px solid #00f2ff;
+    /* TARJETAS DE CALENDARIO (MAX VISIBILIDAD) */
+    .cal-box {
+        background: white;
+        color: #111;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        border-left: 8px solid #00f2ff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    .favor-numb { color: #FFFF00 !important; font-weight: 900; }
+    .cal-date { color: #555; font-size: 0.9rem; font-weight: bold; }
+    .cal-match { font-size: 1.2rem; font-weight: 900; }
 
     .status-card {
         background: rgba(15, 23, 42, 0.95);
@@ -48,48 +43,41 @@ st.markdown("""
         padding: 20px;
         border-radius: 15px;
         text-align: center;
-        min-height: 180px;
     }
-    .metric-title { color: #00f2ff; font-size: 1rem; font-weight: 800; text-transform: uppercase; }
-    .metric-value { font-size: 3rem; font-weight: 900; color: #FFFFFF; margin: 10px 0; }
+    .metric-value { font-size: 2.8rem; font-weight: 900; color: #FFFFFF; }
     
     div.stButton > button:first-child {
         background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%) !important;
         color: black !important;
         font-weight: 900 !important;
         font-size: 1.5rem !important;
-        height: 4rem !important;
+        height: 3.5rem !important;
         border-radius: 15px !important;
-        border: 2px solid white !important;
     }
-
-    .tag-plus { background: #00ff88; color: black; padding: 6px 15px; border-radius: 5px; font-weight: 900; }
-    .tag-minus { background: #ff4b4b; color: white; padding: 6px 15px; border-radius: 5px; font-weight: 900; }
-    
-    .bet-header {
-        background: #00f2ff;
-        color: black !important;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-weight: 900;
-        margin: 25px 0;
-    }
+    .tag-plus { background: #00ff88; color: black; padding: 5px 12px; border-radius: 5px; font-weight: 900; }
+    .tag-minus { background: #ff4b4b; color: white; padding: 5px 12px; border-radius: 5px; font-weight: 900; }
+    .bet-header { background: #00f2ff; color: black; padding: 10px; border-radius: 5px; font-weight: 900; margin: 15px 0; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. MOTOR DE DATOS
+# 2. CARGA DE LIGAS
 ligas = {
-    "🇪🇸 ESPAÑA - LA LIGA": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
-    "🇬🇧 INGLATERRA - PREMIER": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
-    "🇮🇹 ITALIA - SERIE A": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
-    "🇩🇪 ALEMANIA - BUNDESLIGA": "https://www.football-data.co.uk/mmz4281/2526/D1.csv"
+    "🇪🇸 LA LIGA": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
+    "🇬🇧 PREMIER LEAGUE": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
+    "🇮🇹 SERIE A": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
+    "🇩🇪 BUNDESLIGA": "https://www.football-data.co.uk/mmz4281/2526/D1.csv",
+    "🇫🇷 LIGUE 1": "https://www.football-data.co.uk/mmz4281/2526/F1.csv"
 }
 
 @st.cache_data(ttl=3600)
 def load_data(url):
-    try: return pd.read_csv(url)
+    try:
+        df = pd.read_csv(url)
+        df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+        return df
     except: return None
 
+# ESTADÍSTICAS PRO
 def get_pro_stats(df, team):
     recent = df[(df['HomeTeam'] == team) | (df['AwayTeam'] == team)].dropna(subset=['FTR']).tail(5)
     streak = []
@@ -105,76 +93,94 @@ def get_pro_stats(df, team):
 if 'quiniela' not in st.session_state: st.session_state.quiniela = []
 
 with st.sidebar:
-    st.title("⚽ PANEL CONTROL")
-    sel_liga = st.selectbox("COMPETICIÓN", list(ligas.keys()))
+    st.title("⚽ CONTROL DE LIGAS")
+    sel_liga = st.selectbox("ELEGIR COMPETICIÓN", list(ligas.keys()))
+    st.info("Calendario sincronizado con la temporada 2025/26")
 
 df_raw = load_data(ligas[sel_liga])
 
 if df_raw is not None:
-    tab_analisis, tab_calendario = st.tabs(["🔥 ANALIZADOR PRO", "📅 CALENDARIO"])
+    tab_analisis, tab_calendario = st.tabs(["🔥 ANALIZADOR IA", "📅 CALENDARIO SEMANAL"])
 
     with tab_calendario:
-        futuros = df_raw[df_raw['FTR'].isna()][['Date', 'HomeTeam', 'AwayTeam']].head(15)
-        for _, row in futuros.iterrows():
-            st.markdown(f'<div style="background:white; color:black; padding:10px; border-radius:10px; margin-bottom:5px; font-weight:bold;">📅 {row["Date"]} | {row["HomeTeam"]} vs {row["AwayTeam"]}</div>', unsafe_allow_html=True)
+        st.markdown("<h2 style='color:white;'>Partidos de esta Semana</h2>", unsafe_allow_html=True)
+        # Mostrar partidos desde hoy hasta 7 días adelante
+        hoy = datetime.now()
+        semana_vista = hoy + timedelta(days=7)
+        
+        # Filtrar partidos futuros (donde FTR es nulo o la fecha es mayor a hoy)
+        proximos = df_raw[df_raw['Date'] >= hoy.replace(hour=0, minute=0, second=0)].sort_values('Date').head(20)
+        
+        if proximos.empty:
+            st.warning("No se encontraron partidos próximos en el servidor. Prueba con otra liga.")
+        else:
+            for _, row in proximos.iterrows():
+                st.markdown(f"""
+                    <div class="cal-box">
+                        <div class="cal-date">📅 {row['Date'].strftime('%d/%m/%Y')}</div>
+                        <div class="cal-match">{row['HomeTeam']} <span style="color:#00f2ff">VS</span> {row['AwayTeam']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
 
     with tab_analisis:
-        df = df_raw.dropna(subset=['FTR', 'B365H'])
+        # Solo usamos datos con resultados para entrenar a la IA
+        df_train = df_raw.dropna(subset=['FTR', 'B365H'])
         le = LabelEncoder()
-        teams = sorted(pd.concat([df['HomeTeam'], df['AwayTeam']]).unique())
+        teams = sorted(pd.concat([df_train['HomeTeam'], df_train['AwayTeam']]).unique())
         le.fit(teams)
 
-        st.markdown("<h1 style='text-align: center; color: #00f2ff; text-shadow: 2px 2px 10px black;'>AI ELITE TERMINAL</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: #00f2ff;'>AI ELITE TERMINAL</h1>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         t1 = c1.selectbox("EQUIPO LOCAL", teams)
-        racha1, g_fav1 = get_pro_stats(df, t1)
-        c1.markdown(f'<div class="stat-text">Racha: {racha1} | ⚽ Goles Favor: <span class="favor-numb">{g_fav1:.1f}</span></div>', unsafe_allow_html=True)
+        racha1, g_fav1 = get_pro_stats(df_train, t1)
+        c1.markdown(f'<div style="color:white">Racha: {racha1} | ⚽ Favor: <span style="color:#FFFF00">{g_fav1:.1f}</span></div>', unsafe_allow_html=True)
         
         t2 = c2.selectbox("EQUIPO VISITANTE", teams, index=1)
-        racha2, g_fav2 = get_pro_stats(df, t2)
-        c2.markdown(f'<div class="stat-text">Racha: {racha2} | ⚽ Goles Favor: <span class="favor-numb">{g_fav2:.1f}</span></div>', unsafe_allow_html=True)
+        racha2, g_fav2 = get_pro_stats(df_train, t2)
+        c2.markdown(f'<div style="color:white">Racha: {racha2} | ⚽ Favor: <span style="color:#FFFF00">{g_fav2:.1f}</span></div>', unsafe_allow_html=True)
 
-        st.markdown("<div class='bet-header'>📉 AJUSTAR CUOTAS REALES</div>", unsafe_allow_html=True)
+        st.markdown("<div class='bet-header'>📉 CUOTAS Y MERCADO</div>", unsafe_allow_html=True)
         q1, qx, q2 = st.columns(3)
-        v1 = q1.number_input("Cuota Local (1)", value=2.0, step=0.01)
-        vx = qx.number_input("Cuota Empate (X)", value=3.2, step=0.01)
-        v2 = q2.number_input("Cuota Visita (2)", value=3.5, step=0.01)
+        v1 = q1.number_input(f"1 ({t1})", value=2.0)
+        vx = qx.number_input("Empate (X)", value=3.2)
+        v2 = q2.number_input(f"2 ({t2})", value=3.5)
 
-        # LÓGICA IA
-        df['H_c'], df['A_c'] = le.transform(df['HomeTeam']), le.transform(df['AwayTeam'])
-        df['Target'] = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
-        X = df[['H_c', 'A_c', 'B365H', 'B365D', 'B365A']]
-        m_win = RandomForestClassifier(n_estimators=100).fit(X.values, df['Target'])
-        m_goals = RandomForestRegressor(n_estimators=100).fit(X.values, df['FTHG'] + df['FTAG'])
-        m_corn = RandomForestRegressor(n_estimators=100).fit(X.values, df['HC'] + df['AC'])
-        m_cards = RandomForestRegressor(n_estimators=100).fit(X.values, df['HY'] + df['AY'])
+        # CÁLCULOS IA
+        if st.button("🚀 ANALIZAR PARTIDO"):
+            # Entrenar modelos rápidos
+            df_train['H_c'], df_train['A_c'] = le.transform(df_train['HomeTeam']), le.transform(df_train['AwayTeam'])
+            df_train['Target'] = df_train['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
+            X = df_train[['H_c', 'A_c', 'B365H', 'B365D', 'B365A']]
+            
+            m_win = RandomForestClassifier(n_estimators=100).fit(X.values, df_train['Target'])
+            m_goals = RandomForestRegressor(n_estimators=100).fit(X.values, df_train['FTHG'] + df_train['FTAG'])
+            m_corn = RandomForestRegressor(n_estimators=100).fit(X.values, df_train['HC'] + df_train['AC'])
+            m_cards = RandomForestRegressor(n_estimators=100).fit(X.values, df_train['HY'] + df_train['AY'])
 
-        if st.button("🔥 ANALIZAR Y GUARDAR PRONÓSTICO"):
             v_in = [[le.transform([t1])[0], le.transform([t2])[0], v1, vx, v2]]
             probs = m_win.predict_proba(v_in)[0]
             g, c, cards = m_goals.predict(v_in)[0], m_corn.predict(v_in)[0], m_cards.predict(v_in)[0]
             pick = t1 if m_win.predict(v_in)[0] == 1 else (t2 if m_win.predict(v_in)[0] == 2 else "Empate")
 
             st.session_state.quiniela.append({
-                "PARTIDO": f"{t1}-{t2}", 
-                "PICK": pick, 
-                "GOLES": f"{'+2.5' if g > 2.5 else '-2.5'} ({g:.1f})", 
-                "CORNERS": f"{'+9.5' if c > 9.5 else '-9.5'} ({c:.0f})",
-                "TARJETAS": f"{'+4.5' if cards > 4.5 else '-4.5'} ({cards:.1f})", 
+                "PARTIDO": f"{t1}-{t2}", "PICK": pick, 
+                "GOLES": f"{'+2.5' if g > 2.5 else '-2.5'} ({g:.1f})",
+                "TARJETAS": f"{'+4.5' if cards > 4.5 else '-4.5'} ({cards:.1f})",
                 "CONF": f"{max(probs)*100:.0f}%"
             })
 
-            st.markdown("<div class='bet-header'>📊 RESULTADO DEL ESCANEO IA</div>", unsafe_allow_html=True)
-            r1, r2, r3, r4 = st.columns(4)
-            with r1: st.markdown(f'<div class="status-card"><div class="metric-title">GANADOR</div><div class="metric-value" style="color:#00ff88">{pick}</div><span class="tag-plus" style="background:#00f2ff">{max(probs)*100:.0f}%</span></div>', unsafe_allow_html=True)
-            with r2: st.markdown(f'<div class="status-card"><div class="metric-title">GOLES</div><div class="metric-value">{g:.1f}</div><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
-            with r3: st.markdown(f'<div class="status-card"><div class="metric-title">CÓRNERS</div><div class="metric-value">{c:.0f}</div><span class="{"tag-plus" if c > 9.5 else "tag-minus"}">{" + 9.5" if c > 9.5 else " - 9.5"}</span></div>', unsafe_allow_html=True)
-            with r4: st.markdown(f'<div class="status-card"><div class="metric-title">TARJETAS</div><div class="metric-value">{cards:.1f}</div><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
+            # Mostrar resultados en tarjetas
+            st.markdown("<div class='bet-header'>PRONÓSTICO GENERADO</div>", unsafe_allow_html=True)
+            res1, res2, res3, res4 = st.columns(4)
+            res1.markdown(f'<div class="status-card">WINNER<br><span style="color:#00ff88">{pick}</span></div>', unsafe_allow_html=True)
+            res2.markdown(f'<div class="status-card">GOLES<br>{g:.1f}<br><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
+            res3.markdown(f'<div class="status-card">CÓRNERS<br>{c:.0f}<br><span class="tag-plus"> + 8.5</span></div>', unsafe_allow_html=True)
+            res4.markdown(f'<div class="status-card">TARJETAS<br>{cards:.1f}<br><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
 
         if st.session_state.quiniela:
-            st.markdown("<div class='bet-header'>📋 MI QUINIELA MAESTRA</div>", unsafe_allow_html=True)
+            st.markdown("<div class='bet-header'>📋 MI QUINIELA</div>", unsafe_allow_html=True)
             st.table(pd.DataFrame(st.session_state.quiniela))
-            if st.button("🗑️ LIMPIAR QUINIELA"):
+            if st.button("🗑️ VACIAR TABLA"):
                 st.session_state.quiniela = []
                 st.rerun()
