@@ -14,6 +14,7 @@ st.markdown("""
         background-size: cover;
         background-attachment: fixed;
     }
+    /* TARJETAS */
     .status-card {
         background: rgba(30, 41, 59, 0.7);
         border: 1px solid rgba(0, 242, 255, 0.2);
@@ -30,6 +31,33 @@ st.markdown("""
         margin: 20px 0 10px 0;
         border-left: 4px solid #00f2ff;
     }
+    
+    /* BOTÓN ANALIZAR (VERDE NEÓN) */
+    div.stButton > button:first-child {
+        background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%) !important;
+        color: black !important;
+        border: none !important;
+        font-weight: bold !important;
+        padding: 0.6rem 2rem !important;
+        border-radius: 10px !important;
+        width: 100%;
+        transition: 0.3s;
+    }
+    div.stButton > button:first-child:hover {
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+        transform: scale(1.02);
+    }
+
+    /* BOTÓN LIMPIAR (ROJO) */
+    /* Usamos un selector específico para el segundo botón de la página */
+    div.stButton > button:last-child {
+        background: #ff4b4b !important;
+        color: white !important;
+        border: none !important;
+        font-size: 0.8rem !important;
+        padding: 5px 15px !important;
+    }
+
     .tag-plus { background-color: #00ff88; color: black; padding: 3px 10px; border-radius: 4px; font-weight: 900; }
     .tag-minus { background-color: #ff4b4b; color: white; padding: 3px 10px; border-radius: 4px; font-weight: 900; }
     h1, h3, p, label { color: white !important; }
@@ -53,7 +81,6 @@ def load_data(url):
         return data[cols].dropna()
     except: return None
 
-# Inicializar Quiniela en la sesión
 if 'quiniela' not in st.session_state:
     st.session_state.quiniela = []
 
@@ -61,7 +88,6 @@ sel_liga = st.sidebar.selectbox("LIGA", list(ligas.keys()))
 df = load_data(ligas[sel_liga])
 
 if df is not None:
-    # Entrenamiento rápido de IA
     le = LabelEncoder()
     teams = sorted(pd.concat([df['HomeTeam'], df['AwayTeam']]).unique())
     le.fit(teams)
@@ -85,16 +111,15 @@ if df is not None:
     vx = qx.number_input("X (Empate)", value=3.2, step=0.01)
     v2 = q2.number_input(f"2 ({t2})", value=3.5, step=0.01)
 
-    if st.button("🚀 ANALIZAR Y GUARDAR"):
+    # BOTÓN ANALIZAR
+    if st.button("🚀 ANALIZAR Y GUARDAR PARTIDO"):
         v_in = [[le.transform([t1])[0], le.transform([t2])[0], v1, vx, v2]]
         probs = m_win.predict_proba(v_in)[0] 
         g, c, cards = m_goals.predict(v_in)[0], m_corn.predict(v_in)[0], m_cards.predict(v_in)[0]
         
-        # Lógica de Pick
         idx = m_win.predict(v_in)[0]
         ganador_pick = t1 if idx == 1 else (t2 if idx == 2 else "Empate")
 
-        # Guardar en Quiniela con símbolos + / -
         st.session_state.quiniela.append({
             "Partido": f"{t1} vs {t2}",
             "GANADOR": ganador_pick,
@@ -104,7 +129,6 @@ if df is not None:
             "Confianza": f"{max(probs)*100:.0f}%"
         })
 
-        # Mostrar Resultados Visuales
         st.markdown("<div class='bet-header'>DETALLES DEL PRONÓSTICO</div>", unsafe_allow_html=True)
         r1, r2, r3 = st.columns(3)
         with r1:
@@ -117,13 +141,12 @@ if df is not None:
             tag = "tag-plus" if cards > 4.5 else "tag-minus"
             st.markdown(f'<div class="status-card"><p>TARJETAS</p><div class="metric-value">{cards:.1f}</div><span class="{tag}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
 
-    # 5. CUADRO DE QUINIELA MEJORADO
     if st.session_state.quiniela:
         st.markdown("<div class='bet-header'>📋 MI QUINIELA DE SESIÓN</div>", unsafe_allow_html=True)
-        # Convertimos la lista a un DataFrame para mostrarlo como tabla profesional
         q_df = pd.DataFrame(st.session_state.quiniela)
         st.dataframe(q_df, use_container_width=True, hide_index=True)
         
-        if st.button("🗑️ Limpiar Historial"):
+        # BOTÓN LIMPIAR
+        if st.button("🗑️ Limpiar Historial de Quiniela"):
             st.session_state.quiniela = []
             st.rerun()
