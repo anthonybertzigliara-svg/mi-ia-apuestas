@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-# 1. ESTILO DE ALTA VISIBILIDAD (CORRECCIÓN TOTAL DE ETIQUETAS)
+# 1. ESTILO DE MÁXIMA VISIBILIDAD (CORRECCIÓN TOTAL DE TABLAS Y ETIQUETAS)
 st.set_page_config(page_title="WORLD ELITE BETTING AI", layout="wide")
 
 st.markdown("""
@@ -14,12 +14,22 @@ st.markdown("""
         background-size: cover;
     }
     
-    /* FORZAR COLOR BLANCO EN ETIQUETAS DE TEXTO (LOCAL, EMPATE, VISITANTE) */
-    label {
+    /* FORZAR COLOR BLANCO EN ETIQUETAS DE SELECTORES */
+    label { color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; }
+
+    /* --- CORRECCIÓN CRÍTICA PARA LA QUINIELA (TABLA) --- */
+    .stTable td, .stTable th, [data-testid="stTable"] td, [data-testid="stTable"] th {
         color: white !important;
+        font-weight: bold !important;
+        font-size: 1.05rem !important;
+        background-color: rgba(0,0,0,0.4) !important;
+        border: 1px solid #00f2ff33 !important;
+    }
+    /* Estilo para los encabezados de la tabla */
+    thead tr th {
+        background-color: #00f2ff !important;
+        color: black !important;
         font-weight: 900 !important;
-        font-size: 1.1rem !important;
-        text-shadow: 1px 1px 2px black;
     }
 
     .stat-text {
@@ -30,7 +40,7 @@ st.markdown("""
         border-radius: 8px;
         border: 1px solid #00f2ff;
     }
-    .favor-numb { color: #FFFF00 !important; font-weight: 900; font-size: 1.2rem; }
+    .favor-numb { color: #FFFF00 !important; font-weight: 900; }
 
     .status-card {
         background: rgba(15, 23, 42, 0.95);
@@ -40,7 +50,7 @@ st.markdown("""
         text-align: center;
         min-height: 180px;
     }
-    .metric-title { color: #00f2ff; font-size: 1rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
+    .metric-title { color: #00f2ff; font-size: 1rem; font-weight: 800; text-transform: uppercase; }
     .metric-value { font-size: 3rem; font-weight: 900; color: #FFFFFF; margin: 10px 0; }
     
     div.stButton > button:first-child {
@@ -53,8 +63,8 @@ st.markdown("""
         border: 2px solid white !important;
     }
 
-    .tag-plus { background: #00ff88; color: black; padding: 6px 18px; border-radius: 6px; font-weight: 900; display: inline-block; }
-    .tag-minus { background: #ff4b4b; color: white; padding: 6px 18px; border-radius: 6px; font-weight: 900; display: inline-block; }
+    .tag-plus { background: #00ff88; color: black; padding: 6px 15px; border-radius: 5px; font-weight: 900; }
+    .tag-minus { background: #ff4b4b; color: white; padding: 6px 15px; border-radius: 5px; font-weight: 900; }
     
     .bet-header {
         background: #00f2ff;
@@ -63,7 +73,6 @@ st.markdown("""
         border-radius: 8px;
         font-weight: 900;
         margin: 25px 0;
-        font-size: 1.2rem;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -90,7 +99,7 @@ def get_pro_stats(df, team):
         g_favor += row['FTHG'] if is_home else row['FTAG']
         res = 'V' if (is_home and row['FTR']=='H') or (not is_home and row['FTR']=='A') else ('E' if row['FTR']=='D' else 'D')
         color = "#00ff88" if res=='V' else ("#ffcc00" if res=='E' else "#ff4b4b")
-        streak.append(f'<span style="color:{color}; font-size:1.2rem;">{res}</span>')
+        streak.append(f'<span style="color:{color};">{res}</span>')
     return " ".join(streak), g_favor / 5 if not recent.empty else 0
 
 if 'quiniela' not in st.session_state: st.session_state.quiniela = []
@@ -132,11 +141,10 @@ if df_raw is not None:
         vx = qx.number_input("Cuota Empate (X)", value=3.2, step=0.01)
         v2 = q2.number_input("Cuota Visita (2)", value=3.5, step=0.01)
 
-        # ENTRENAMIENTO IA
+        # LÓGICA IA
         df['H_c'], df['A_c'] = le.transform(df['HomeTeam']), le.transform(df['AwayTeam'])
         df['Target'] = df['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
         X = df[['H_c', 'A_c', 'B365H', 'B365D', 'B365A']]
-        
         m_win = RandomForestClassifier(n_estimators=100).fit(X.values, df['Target'])
         m_goals = RandomForestRegressor(n_estimators=100).fit(X.values, df['FTHG'] + df['FTAG'])
         m_corn = RandomForestRegressor(n_estimators=100).fit(X.values, df['HC'] + df['AC'])
@@ -149,19 +157,20 @@ if df_raw is not None:
             pick = t1 if m_win.predict(v_in)[0] == 1 else (t2 if m_win.predict(v_in)[0] == 2 else "Empate")
 
             st.session_state.quiniela.append({
-                "PARTIDO": f"{t1}-{t2}", "PICK": pick, "GOLES": f"{g:.1f}", "TARJETAS": f"{cards:.1f}", "CONF": f"{max(probs)*100:.0f}%"
+                "PARTIDO": f"{t1}-{t2}", 
+                "PICK": pick, 
+                "GOLES": f"{'+2.5' if g > 2.5 else '-2.5'} ({g:.1f})", 
+                "CORNERS": f"{'+9.5' if c > 9.5 else '-9.5'} ({c:.0f})",
+                "TARJETAS": f"{'+4.5' if cards > 4.5 else '-4.5'} ({cards:.1f})", 
+                "CONF": f"{max(probs)*100:.0f}%"
             })
 
             st.markdown("<div class='bet-header'>📊 RESULTADO DEL ESCANEO IA</div>", unsafe_allow_html=True)
             r1, r2, r3, r4 = st.columns(4)
-            with r1:
-                st.markdown(f'<div class="status-card"><div class="metric-title">GANADOR</div><div class="metric-value" style="color:#00ff88">{pick}</div><span class="tag-plus" style="background:#00f2ff">{max(probs)*100:.0f}%</span></div>', unsafe_allow_html=True)
-            with r2:
-                st.markdown(f'<div class="status-card"><div class="metric-title">GOLES</div><div class="metric-value">{g:.1f}</div><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
-            with r3:
-                st.markdown(f'<div class="status-card"><div class="metric-title">CÓRNERS</div><div class="metric-value">{c:.0f}</div><span class="{"tag-plus" if c > 9.5 else "tag-minus"}">{" + 9.5" if c > 9.5 else " - 9.5"}</span></div>', unsafe_allow_html=True)
-            with r4:
-                st.markdown(f'<div class="status-card"><div class="metric-title">TARJETAS</div><div class="metric-value">{cards:.1f}</div><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
+            with r1: st.markdown(f'<div class="status-card"><div class="metric-title">GANADOR</div><div class="metric-value" style="color:#00ff88">{pick}</div><span class="tag-plus" style="background:#00f2ff">{max(probs)*100:.0f}%</span></div>', unsafe_allow_html=True)
+            with r2: st.markdown(f'<div class="status-card"><div class="metric-title">GOLES</div><div class="metric-value">{g:.1f}</div><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
+            with r3: st.markdown(f'<div class="status-card"><div class="metric-title">CÓRNERS</div><div class="metric-value">{c:.0f}</div><span class="{"tag-plus" if c > 9.5 else "tag-minus"}">{" + 9.5" if c > 9.5 else " - 9.5"}</span></div>', unsafe_allow_html=True)
+            with r4: st.markdown(f'<div class="status-card"><div class="metric-title">TARJETAS</div><div class="metric-value">{cards:.1f}</div><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
 
         if st.session_state.quiniela:
             st.markdown("<div class='bet-header'>📋 MI QUINIELA MAESTRA</div>", unsafe_allow_html=True)
