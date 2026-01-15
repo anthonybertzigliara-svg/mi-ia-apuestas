@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 
-# 1. ESTILO ORIGINAL RECUPERADO (MÁXIMA CALIDAD)
+# 1. ESTILO ELITE (MÁXIMA VISIBILIDAD)
 st.set_page_config(page_title="WORLD ELITE BETTING AI", layout="wide")
 
 st.markdown("""
@@ -13,39 +13,33 @@ st.markdown("""
                     url("https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop");
         background-size: cover;
     }
-    /* CORRECCIÓN DE LETRAS SELECTORES */
     label { color: white !important; font-weight: 900 !important; font-size: 1.1rem !important; }
     
-    /* TABLA QUINIELA REPARADA */
     .stTable td, .stTable th {
         color: white !important;
         font-weight: bold !important;
         background-color: rgba(0,0,0,0.6) !important;
-        border: 1px solid #00f2ff33 !important;
     }
     thead tr th { background-color: #00f2ff !important; color: black !important; }
 
-    /* TARJETAS DE RESULTADOS NEÓN */
     .status-card {
         background: rgba(15, 23, 42, 0.95);
         border: 2px solid #00f2ff;
         padding: 20px;
         border-radius: 15px;
         text-align: center;
-        box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
     }
-    .metric-title { color: #00f2ff; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; }
-    .metric-value { font-size: 2.8rem; font-weight: 900; color: #FFFFFF; margin: 5px 0; }
+    .metric-value { font-size: 2.8rem; font-weight: 900; color: #FFFFFF; }
     
-    /* CALENDARIO REPARADO */
-    .cal-item {
-        background: white;
-        color: black !important;
+    /* DISEÑO DE CALENDARIO GARANTIZADO */
+    .cal-box {
+        background: rgba(255, 255, 255, 0.95);
+        color: #111 !important;
         padding: 12px;
-        border-radius: 10px;
+        border-radius: 8px;
         margin-bottom: 8px;
         border-left: 8px solid #00f2ff;
-        font-weight: bold;
+        font-family: sans-serif;
     }
 
     div.stButton > button:first-child {
@@ -56,19 +50,18 @@ st.markdown("""
         height: 3.5rem !important;
         border-radius: 15px !important;
     }
-
     .tag-plus { background: #00ff88; color: black; padding: 4px 12px; border-radius: 5px; font-weight: 900; }
     .tag-minus { background: #ff4b4b; color: white; padding: 4px 12px; border-radius: 5px; font-weight: 900; }
     .bet-header { background: #00f2ff; color: black; padding: 10px; border-radius: 5px; font-weight: 900; margin: 15px 0; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. MOTOR DE DATOS (CONEXIÓN ESTABLE)
+# 2. MOTOR DE DATOS
 ligas = {
-    "🇪🇸 ESPAÑA - LA LIGA": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
-    "🇬🇧 INGLATERRA - PREMIER": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
-    "🇮🇹 ITALIA - SERIE A": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
-    "🇩🇪 ALEMANIA - BUNDESLIGA": "https://www.football-data.co.uk/mmz4281/2526/D1.csv"
+    "🇪🇸 ESPAÑA": "https://www.football-data.co.uk/mmz4281/2526/SP1.csv",
+    "🇬🇧 INGLATERRA": "https://www.football-data.co.uk/mmz4281/2526/E0.csv",
+    "🇮🇹 ITALIA": "https://www.football-data.co.uk/mmz4281/2526/I1.csv",
+    "🇩🇪 ALEMANIA": "https://www.football-data.co.uk/mmz4281/2526/D1.csv"
 }
 
 @st.cache_data(ttl=3600)
@@ -76,38 +69,33 @@ def load_data(url):
     try: return pd.read_csv(url)
     except: return None
 
-def get_stats(df, team):
-    recent = df[(df['HomeTeam'] == team) | (df['AwayTeam'] == team)].dropna(subset=['FTR']).tail(5)
-    streak = []
-    g_favor = 0
-    for _, row in recent.iterrows():
-        is_home = row['HomeTeam'] == team
-        g_favor += row['FTHG'] if is_home else row['FTAG']
-        res = 'V' if (is_home and row['FTR']=='H') or (not is_home and row['FTR']=='A') else ('E' if row['FTR']=='D' else 'D')
-        color = "#00ff88" if res=='V' else ("#ffcc00" if res=='E' else "#ff4b4b")
-        streak.append(f'<span style="color:{color};">{res}</span>')
-    return " ".join(streak), g_favor / 5 if not recent.empty else 0
-
 if 'quiniela' not in st.session_state: st.session_state.quiniela = []
 
 with st.sidebar:
-    st.title("⚽ PANEL CONTROL")
-    sel_liga = st.selectbox("COMPETICIÓN", list(ligas.keys()))
+    st.title("⚽ LIGAS DISPONIBLES")
+    sel_liga = st.selectbox("ELEGIR COMPETICIÓN", list(ligas.keys()))
 
 df_raw = load_data(ligas[sel_liga])
 
 if df_raw is not None:
-    tab_analisis, tab_calendario = st.tabs(["🔥 ANALIZADOR PRO", "📅 CALENDARIO"])
+    tab_analisis, tab_calendario = st.tabs(["🔥 ANALIZADOR PRO", "📅 CALENDARIO DE LA TEMPORADA"])
 
     with tab_calendario:
-        st.markdown("<h2 style='color:white;'>Próximos Partidos</h2>", unsafe_allow_html=True)
-        # Filtramos partidos sin resultado (los próximos)
-        proximos = df_raw[df_raw['FTR'].isna()][['Date', 'HomeTeam', 'AwayTeam']].head(20)
-        if proximos.empty:
-            st.info("No hay partidos próximos registrados. Revisa otra liga o espera a la actualización.")
+        st.markdown("<h2 style='color:white;'>Listado de Partidos</h2>", unsafe_allow_html=True)
+        # Seleccionamos todos los partidos que aún no tienen resultado (FTR es nulo)
+        # Esto incluye los de mañana, la semana que viene y el resto de la liga
+        pendientes = df_raw[df_raw['FTR'].isna()][['Date', 'HomeTeam', 'AwayTeam']]
+        
+        if pendientes.empty:
+            st.warning("No hay más partidos pendientes en este archivo de liga.")
         else:
-            for _, row in proximos.iterrows():
-                st.markdown(f'<div class="cal-item">📅 {row["Date"]} | {row["HomeTeam"]} VS {row["AwayTeam"]}</div>', unsafe_allow_html=True)
+            for _, row in pendientes.head(30).iterrows(): # Mostramos los siguientes 30 para no saturar
+                st.markdown(f"""
+                <div class="cal-box">
+                    <strong>📅 {row['Date']}</strong><br>
+                    <span style="font-size:1.1rem;">{row['HomeTeam']} <span style="color:#00f2ff">VS</span> {row['AwayTeam']}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
     with tab_analisis:
         df_train = df_raw.dropna(subset=['FTR', 'B365H'])
@@ -115,24 +103,20 @@ if df_raw is not None:
         teams = sorted(pd.concat([df_train['HomeTeam'], df_train['AwayTeam']]).unique())
         le.fit(teams)
 
-        st.markdown("<h1 style='text-align: center; color: #00f2ff; text-shadow: 2px 2px 10px black;'>AI ELITE TERMINAL</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; color: #00f2ff;'>AI ELITE TERMINAL</h1>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         t1 = c1.selectbox("LOCAL", teams)
-        racha1, g_fav1 = get_stats(df_train, t1)
-        c1.markdown(f'<div style="color:white; font-weight:bold;">Racha: {racha1} | ⚽ Favor: <span style="color:#FFFF00">{g_fav1:.1f}</span></div>', unsafe_allow_html=True)
-        
         t2 = c2.selectbox("VISITANTE", teams, index=1)
-        racha2, g_fav2 = get_stats(df_train, t2)
-        c2.markdown(f'<div style="color:white; font-weight:bold;">Racha: {racha2} | ⚽ Favor: <span style="color:#FFFF00">{g_fav2:.1f}</span></div>', unsafe_allow_html=True)
 
-        st.markdown("<div class='bet-header'>CUOTAS REALES 1X2</div>", unsafe_allow_html=True)
+        st.markdown("<div class='bet-header'>CUOTAS 1X2</div>", unsafe_allow_html=True)
         q1, qx, q2 = st.columns(3)
-        v1 = q1.number_input(f"1 ({t1})", value=2.0)
-        vx = qx.number_input("X (Empate)", value=3.2)
-        v2 = q2.number_input(f"2 ({t2})", value=3.5)
+        v1 = q1.number_input(f"Cuota {t1}", value=2.0)
+        vx = qx.number_input("Cuota X", value=3.2)
+        v2 = q2.number_input(f"Cuota {t2}", value=3.5)
 
         if st.button("🚀 ANALIZAR Y GUARDAR"):
+            # Entrenamiento rápido
             df_train['H_c'], df_train['A_c'] = le.transform(df_train['HomeTeam']), le.transform(df_train['AwayTeam'])
             df_train['Target'] = df_train['FTR'].apply(lambda x: 1 if x == 'H' else (2 if x == 'A' else 0))
             X = df_train[['H_c', 'A_c', 'B365H', 'B365D', 'B365A']]
@@ -150,21 +134,21 @@ if df_raw is not None:
             st.session_state.quiniela.append({
                 "PARTIDO": f"{t1}-{t2}", "PICK": pick, 
                 "GOLES": f"{'+2.5' if g > 2.5 else '-2.5'} ({g:.1f})",
-                "CÓRNERS": f"{'+9.5' if c > 9.5 else '-9.5'} ({c:.0f})",
+                "CORNERS": f"{'+9.5' if c > 9.5 else '-9.5'} ({c:.0f})",
                 "TARJETAS": f"{'+4.5' if cards > 4.5 else '-4.5'} ({cards:.1f})",
                 "CONF": f"{max(probs)*100:.0f}%"
             })
 
-            st.markdown("<div class='bet-header'>PRONÓSTICO GENERADO</div>", unsafe_allow_html=True)
+            st.markdown("<div class='bet-header'>RESULTADOS IA</div>", unsafe_allow_html=True)
             r1, r2, r3, r4 = st.columns(4)
-            with r1: st.markdown(f'<div class="status-card"><div class="metric-title">WINNER</div><div class="metric-value" style="color:#00ff88">{pick}</div><span class="tag-plus" style="background:#00f2ff">{max(probs)*100:.0f}%</span></div>', unsafe_allow_html=True)
-            with r2: st.markdown(f'<div class="status-card"><div class="metric-title">GOLES</div><div class="metric-value">{g:.1f}</div><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
-            with r3: st.markdown(f'<div class="status-card"><div class="metric-title">CÓRNERS</div><div class="metric-value">{c:.0f}</div><span class="{"tag-plus" if c > 9.5 else "tag-minus"}">{" + 9.5" if c > 9.5 else " - 9.5"}</span></div>', unsafe_allow_html=True)
-            with r4: st.markdown(f'<div class="status-card"><div class="metric-title">TARJETAS</div><div class="metric-value">{cards:.1f}</div><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
+            with r1: st.markdown(f'<div class="status-card"><div style="color:#00f2ff">PICK</div><div class="metric-value" style="color:#00ff88">{pick}</div></div>', unsafe_allow_html=True)
+            with r2: st.markdown(f'<div class="status-card"><div style="color:#00f2ff">GOLES</div><div class="metric-value">{g:.1f}</div><span class="{"tag-plus" if g > 2.5 else "tag-minus"}">{" + 2.5" if g > 2.5 else " - 2.5"}</span></div>', unsafe_allow_html=True)
+            with r3: st.markdown(f'<div class="status-card"><div style="color:#00f2ff">CÓRNERS</div><div class="metric-value">{c:.0f}</div><span class="{"tag-plus" if c > 9.5 else "tag-minus"}">{" + 9.5" if c > 9.5 else " - 9.5"}</span></div>', unsafe_allow_html=True)
+            with r4: st.markdown(f'<div class="status-card"><div style="color:#00f2ff">TARJETAS</div><div class="metric-value">{cards:.1f}</div><span class="{"tag-plus" if cards > 4.5 else "tag-minus"}">{" + 4.5" if cards > 4.5 else " - 4.5"}</span></div>', unsafe_allow_html=True)
 
-        if st.session_state.quiniela:
-            st.markdown("<div class='bet-header'>📋 MI QUINIELA</div>", unsafe_allow_html=True)
-            st.table(pd.DataFrame(st.session_state.quiniela))
-            if st.button("🗑️ VACIAR QUINIELA"):
-                st.session_state.quiniela = []
-                st.rerun()
+    if st.session_state.quiniela:
+        st.markdown("<div class='bet-header'>📋 MI QUINIELA</div>", unsafe_allow_html=True)
+        st.table(pd.DataFrame(st.session_state.quiniela))
+        if st.button("🗑️ LIMPIAR TODO"):
+            st.session_state.quiniela = []
+            st.rerun()
